@@ -2,26 +2,27 @@
 using System.Collections.Generic;
 using System.Drawing;
 using System.Linq;
-using System.Runtime.Remoting.Messaging;
-using System.Text;
-using System.Threading;
-using System.Threading.Tasks;
+using System.Windows.Forms;
 
 namespace Tetris
 {
     internal class Scene
     {
-        public Rectangle[,] gameGrid;
-        public bool[,] isFilled;
-        public SolidBrush[,] gridBrushes;
-        public IFigure currentFigure;
-        Form parentForm;
-        public int num_rows, numCols;
-        public int height, width, size;
+        public Rectangle[,] GameGrid { get; set; }
+        public bool[,] IsFilled { get; set; }
+        public SolidBrush[,] GridBrushes { get; set; }
+        public IFigure CurrentFigure { get; set; }
+        public int NumRows { get; set; }
+        public int NumCols { get; set; }
+        public int Height { get; set; }
+        public int Width { get; set; }
+        public int Size { get; set; }
+        public int Score { get; set; }
+        public bool IsPaused { get; set; }
 
         Random random;
-        BasicFigure[] figures;
-        SolidBrush[] figureBrushes = new SolidBrush[] { 
+        readonly BasicFigure[] figures;
+        readonly SolidBrush[] figureBrushes = new SolidBrush[] {
                                                         new SolidBrush(Color.Red),
                                                         new SolidBrush(Color.Blue),
                                                         new SolidBrush(Color.Green),
@@ -41,60 +42,68 @@ namespace Tetris
                                                         new SolidBrush(Color.Indigo)
                                                         };
 
-
-        public Scene(Form form, int height, int width, int size) 
+        public Scene(int height, int width, int size)
         {
-            this.height = height;
-            this.width = width;
-            this.size = size;
+            Height = height;
+            Width = width;
+            Size = size;
+            IsPaused = true;
 
-            this.num_rows = height / size;
-            this.numCols = width / size;
+            NumRows = height / size;
+            NumCols = width / size;
 
-            this.gameGrid = new Rectangle[num_rows, numCols];
-            this.isFilled = new bool[num_rows, numCols];
-            this.parentForm = form;
+            GameGrid = new Rectangle[NumRows, NumCols];
+            IsFilled = new bool[NumRows, NumCols];
+            GridBrushes = new SolidBrush[NumRows, NumCols];
 
-            this.gridBrushes = new SolidBrush[num_rows, numCols];
+            figures = new BasicFigure[] {
+                                                new SquareFigure(Size, NumCols / 2 * Size),
+                                                new LineFigure(Size, NumCols / 2* Size),
+                                                new L1Figure(Size, NumCols / 2 * Size),
+                                                new L2Figure(Size, NumCols / 2 * Size),
+                                                new TFigure(Size, NumCols / 2 * Size),
+                                                new S1Figure(Size, NumCols / 2 * Size),
+                                                new S2Figure(Size, NumCols / 2* Size),
+                                                };
 
-            for (int i = 0; i < num_rows; i++) 
-            { 
-                for (int j = 0; j < numCols; j++)
+            StartGame();
+        }
+
+        public void StartGame()
+        {
+            Score = 0;
+
+            // Initialize the grid
+            for (int i = 0; i < NumRows; i++)
+            {
+                for (int j = 0; j < NumCols; j++)
                 {
-                    this.isFilled[i, j] = false;
-                    this.gameGrid[i, j] = new Rectangle(j*size, i * size, size, size);
+                    IsFilled[i, j] = false;
+                    GameGrid[i, j] = new Rectangle(j * Size, i * Size, Size, Size);
                 }
             }
 
-            this.figures = new BasicFigure[] { 
-                                                new SquareFigure(size, numCols/2*size), 
-                                                new LineFigure(size, numCols/2*size), 
-                                                new L1Figure(size, numCols / 2 * size), 
-                                                new L2Figure(size, numCols / 2 * size),
-                                                new TFigure(size, numCols / 2 * size),
-                                                new S1Figure(size, numCols/2*size),
-                                                new S2Figure(size, numCols/2*size),
-                                                };
-
-            this.random = new Random();
-            this.currentFigure = figures[this.random.Next(figures.Length)];
-            this.currentFigure.Brush = this.figureBrushes[this.random.Next(figureBrushes.Length)];
-
+            // choose a random figure with random color
+            random = new Random();
+            CurrentFigure = figures[random.Next(figures.Length)];
+            CurrentFigure.Brush = figureBrushes[random.Next(figureBrushes.Length)];
         }
 
         bool CheckBottomHit()
         {
-            for (int i = 0; i < currentFigure.Items.Length; i++)
+            for (int i = 0; i < CurrentFigure.Items.Length; i++)
             {
-                if (currentFigure.Items[i].Y + this.size >= this.height) 
+                // check whether the current figure hits the bottom border of the game.
+                if (CurrentFigure.Items[i].Y + Size >= Height)
                 {
                     return true;
                 }
 
-                int row_index = currentFigure.Items[i].Y / this.size;
-                int col_index = currentFigure.Items[i].X / this.size;
+                int row_index = CurrentFigure.Items[i].Y / Size;
+                int col_index = CurrentFigure.Items[i].X / Size;
 
-                if (this.isFilled[row_index + 1, col_index] == true)
+                // check whether the current figure is on top of a block
+                if (IsFilled[row_index + 1, col_index] == true)
                 {
                     return true;
                 }
@@ -103,36 +112,58 @@ namespace Tetris
 
             return false;
         }
-        
+
         public void Step()
         {
-
-            if (this.CheckBottomHit() == true)
+            if (CheckBottomHit() == true)
             {
                 PutOnGrid();
-                this.currentFigure = this.figures[this.random.Next(this.figures.Length)];
-                this.currentFigure.Brush = this.figureBrushes[this.random.Next(figureBrushes.Length)];
-                this.currentFigure.Reset();
+                CurrentFigure = figures[random.Next(figures.Length)];
+                CurrentFigure.Brush = figureBrushes[random.Next(figureBrushes.Length)];
+                CurrentFigure.Reset();
                 CheckGrid();
+
+                if (CheckOverflow() == true)
+                {
+                    IsPaused = true;
+                    MessageBox.Show("You loose.");
+                    IsPaused = false;
+                    StartGame();
+                }
             }
             else
             {
-                this.currentFigure.Step();
+                CurrentFigure.MoveDown();
             }
         }
 
+        private bool CheckOverflow()
+        {
+            bool state = false;
+
+            for (int j = 0; j < NumCols; j++)
+            {
+                if (IsFilled[0, j] == true)
+                {
+                    state = true;
+                    break;
+                }
+            }
+
+            return state;
+        }
 
         void CheckGrid()
         {
             List<int> selectedRows = new List<int>();
 
-            for (int i = this.num_rows - 1; i >= 0; i--)
+            for (int i = NumRows - 1; i >= 0; i--)
             {
                 bool flag = true;
 
-                for (int j = 0; j < this.numCols; j++)
+                for (int j = 0; j < NumCols; j++)
                 {
-                    if (this.isFilled[i, j] == false)
+                    if (IsFilled[i, j] == false)
                     {
                         flag = false;
                         break;
@@ -143,81 +174,87 @@ namespace Tetris
                 {
                     selectedRows.Add(i);
                 }
-
             }
 
-            if (selectedRows.Count == 0) 
+            EraseFullRows(selectedRows);            
+        }
+
+        private void EraseFullRows(List<int> rows)
+        {
+
+            if (rows.Count == 0)
             {
                 return;
             }
 
-            bool[, ] isFilledCopy = new bool[num_rows, numCols];
-            SolidBrush[,] gridBrushesCopy = new SolidBrush[num_rows, numCols];
+            bool[,] isFilledCopy = new bool[NumRows, NumCols];
+            SolidBrush[,] gridBrushesCopy = new SolidBrush[NumRows, NumCols];
 
-            int newIndex = num_rows - 1;
+            int newIndex = NumRows - 1;
 
-            for (int i = this.num_rows - 1; i >= 0; i--)
+            for (int i = NumRows - 1; i >= 0; i--)
             {
-                if (selectedRows.Contains(i) == true)
+                if (rows.Contains(i) == true)
                 {
                     continue;
                 }
-                else 
-                { 
-                    for (int j = 0;  j < numCols; j++) 
+                else
+                {
+                    for (int j = 0; j < NumCols; j++)
                     {
-                        isFilledCopy[newIndex, j] = this.isFilled[i, j];
-                        gridBrushesCopy[newIndex, j] = this.gridBrushes[i, j];
+                        isFilledCopy[newIndex, j] = IsFilled[i, j];
+                        gridBrushesCopy[newIndex, j] = GridBrushes[i, j];
                     }
                     newIndex--;
                 }
             }
 
-            for (int i = 0; i < selectedRows.Count; i++)
+            for (int i = 0; i < rows.Count; i++)
             {
-                for (int j = 0; j < numCols; j++)
+                for (int j = 0; j < NumCols; j++)
                 {
                     isFilledCopy[i, j] = false;
                 }
             }
 
-            this.isFilled = isFilledCopy;
-            this.gridBrushes = gridBrushesCopy;
+            IsFilled = isFilledCopy;
+            GridBrushes = gridBrushesCopy;
 
+            Score += rows.Count();
         }
 
         public void MoveLeft()
         {
-            this.currentFigure.MoveLeft(this.isFilled);
+            CurrentFigure.MoveLeft(IsFilled);
         }
 
         public void MoveRight()
         {
-            this.currentFigure.MoveRight(this.isFilled);
+            CurrentFigure.MoveRight(IsFilled);
         }
 
         public void Rotate()
         {
-            this.currentFigure.Rotate(this.isFilled);
+            CurrentFigure.Rotate(IsFilled);
         }
 
         public void FastStep()
         {
-            while (this.CheckBottomHit() == false)
+            while (CheckBottomHit() == false)
             {
-                this.currentFigure.Step();
+                CurrentFigure.MoveDown();
             }
         }
 
         void PutOnGrid()
         {
-            for (int i = 0; i < currentFigure.Items.Length; ++i) 
+            for (int i = 0; i < CurrentFigure.Items.Length; ++i)
             {
-                int col_index = currentFigure.Items[i].X / this.size;
-                int row_index = currentFigure.Items[i].Y / this.size;
+                int col_index = CurrentFigure.Items[i].X / Size;
+                int row_index = CurrentFigure.Items[i].Y / Size;
 
-                isFilled[row_index, col_index] = true;
-                this.gridBrushes[row_index, col_index] = currentFigure.Brush;
+                IsFilled[row_index, col_index] = true;
+                GridBrushes[row_index, col_index] = CurrentFigure.Brush;
             }
         }
 

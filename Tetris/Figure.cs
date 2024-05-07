@@ -1,18 +1,14 @@
 ﻿using System;
-using System.Collections.Generic;
 using System.Drawing;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
 
 namespace Tetris
 {
     internal interface IFigure
     {
         SolidBrush Brush { get; set; }
-        Rectangle[] Items { get; set; }
-        int Size { get; set; }
-        void Step();
+        int Size { get; }
+        Rectangle[] Items { get;}
+        void MoveDown();
         void MoveLeft(bool[,] gameGrid);
         void MoveRight(bool[,] gameGrid);
         void Rotate(bool[,] gameGrid);
@@ -22,43 +18,39 @@ namespace Tetris
 
     internal abstract class BasicFigure: IFigure
     {
-        Rectangle[] items;
-        protected int size;
-        protected int spawnX;
-        SolidBrush brush;
-
-        public Rectangle[] Items { get => this.items; set => this.items = value; }
-        public int Size { get => this.size; set => this.size = value; }
-        public SolidBrush Brush { get => this.brush; set => this.brush = value; }       
+        public SolidBrush Brush { get; set; }
+        public Rectangle[] Items { get;  private set; }
+        public int Size { get; private set; }
+        protected readonly int spawnX;
 
         public bool CheckCollisions(bool[,] gameGrid)
         {
-            for (int i = 0; i < this.Items.Length; i++)
+            for (int i = 0; i < Items.Length; i++)
             {
-                if (this.Items[i].X / this.size > gameGrid.GetLength(1) - 1)
+                if (Items[i].X / Size > gameGrid.GetLength(1) - 1)
                 {
                     return true;
                 }
 
-                if (this.Items[i].X < 0)
+                if (Items[i].X < 0)
                 {
                     return true;
                 }
 
-                if (this.Items[i].Y / this.size > gameGrid.GetLength(0) - 1)
+                if (Items[i].Y / Size > gameGrid.GetLength(0) - 1)
                 {
                     return true;
                 }
 
-                if (this.Items[i].Y < 0)
+                if (Items[i].Y < 0)
                 {
                     return true;
                 }
 
-                int row_index = this.Items[i].Y / this.size;
-                int col_index = this.Items[i].X / this.size;
+                int rowIndex = Items[i].Y / Size;
+                int colIndex = Items[i].X / Size;
 
-                if (gameGrid[row_index, col_index] == true)
+                if (gameGrid[rowIndex, colIndex] == true)
                 {
                     return true;
                 }
@@ -70,67 +62,67 @@ namespace Tetris
 
         public void MoveLeft(bool[,] gameGrid)
         {         
-            Rectangle[] oldState = new Rectangle[this.Items.Length];
-            Array.Copy(this.Items, oldState, oldState.Length);
+            Rectangle[] oldState = new Rectangle[Items.Length];
+            Array.Copy(Items, oldState, oldState.Length);
 
-            for (int i = 0; i < this.Items.Length; i++)
+            for (int i = 0; i < Items.Length; i++)
             {
-                this.Items[i].X -= this.Size;
+                Items[i].X -= Size;
             }
 
-            if (this.CheckCollisions(gameGrid) == true)
+            if (CheckCollisions(gameGrid) == true)
             {
-                this.Items = oldState;
+                Items = oldState;
             }
         }
 
         public void MoveRight(bool[,] gameGrid)
         {
-            Rectangle[] oldState = new Rectangle[this.Items.Length];
-            Array.Copy(this.Items, oldState, oldState.Length);
+            Rectangle[] oldState = new Rectangle[Items.Length];
+            Array.Copy(Items, oldState, oldState.Length);
 
-            for (int i = 0; i < this.Items.Length; i++)
+            for (int i = 0; i < Items.Length; i++)
             {
-                this.Items[i].X += this.Size;
+                Items[i].X += Size;
             }
 
-            if (this.CheckCollisions(gameGrid) == true)
+            if (CheckCollisions(gameGrid) == true)
             {
-                this.Items = oldState;
+                Items = oldState;
             }
         }
 
         virtual public void Rotate(bool[,] gameGrid)
         {
-            Rectangle[] oldState = new Rectangle[this.Items.Length];
-            Array.Copy(this.Items, oldState, oldState.Length);
+            Rectangle[] oldState = new Rectangle[Items.Length];
+            Array.Copy(Items, oldState, oldState.Length);
 
-            for (int i = 0; i < this.Items.Length; i++)
+            for (int i = 0; i < Items.Length; i++)
             {
                 if (i == 1)
                 {
                     continue;
                 }
 
-                int tempX = this.Items[i].X;
-                int tempY = this.Items[i].Y;
+                int tempX = Items[i].X;
+                int tempY = Items[i].Y;
 
-                this.Items[i].X = -(tempY - Items[1].Y) + Items[1].X;
-                this.Items[i].Y = +(tempX - Items[1].X) + Items[1].Y;
+                Items[i].X = -(tempY - Items[1].Y) + Items[1].X;
+                Items[i].Y = +(tempX - Items[1].X) + Items[1].Y;
             }
 
-            if (this.CheckCollisions(gameGrid) == true)
+            if (CheckCollisions(gameGrid) == true)
             {
-                this.Items = oldState;
+                Items = oldState;
             }
         }
 
 
-        public void Step()
+        public void MoveDown()
         {
-            for (int i = 0; i < this.Items.Length; i++)
+            for (int i = 0; i < Items.Length; i++)
             {
-                this.Items[i].Y += this.Size;
+                Items[i].Y += Size;
             }
         }
 
@@ -138,8 +130,8 @@ namespace Tetris
 
         public BasicFigure(int size, int spawnX)
         {
-            this.Items = new Rectangle[4];
-            this.Size = size;
+            Items = new Rectangle[4];
+            Size = size;
             this.spawnX = spawnX;
         }
 
@@ -153,10 +145,10 @@ namespace Tetris
         }
         public override void Reset()
         {
-            this.Items[0] = new Rectangle(this.spawnX + 0, 0, size, size);
-            this.Items[1] = new Rectangle(this.spawnX + size, 0, size, size);
-            this.Items[2] = new Rectangle(this.spawnX + 2 * size, 0, size, size);
-            this.Items[3] = new Rectangle(this.spawnX + 3 * size, 0, size, size);
+            Items[0] = new Rectangle(spawnX + 0, 0, Size, Size);
+            Items[1] = new Rectangle(spawnX + Size, 0, Size, Size);
+            Items[2] = new Rectangle(spawnX + 2 * Size, 0, Size, Size);
+            Items[3] = new Rectangle(spawnX + 3 * Size, 0, Size, Size);
         }
 
     }
@@ -174,10 +166,10 @@ namespace Tetris
         public override void Reset()
         {
 
-            this.Items[0] = new Rectangle(this.spawnX + 0, 0, size, size);
-            this.Items[1] = new Rectangle(this.spawnX + size, 0, size, size);
-            this.Items[2] = new Rectangle(this.spawnX + 0, size, size, size);
-            this.Items[3] = new Rectangle(this.spawnX + size, size, size, size);
+            Items[0] = new Rectangle(spawnX + 0, 0, Size, Size);
+            Items[1] = new Rectangle(spawnX + Size, 0, Size, Size);
+            Items[2] = new Rectangle(spawnX + 0, Size, Size, Size);
+            Items[3] = new Rectangle(spawnX + Size, Size, Size, Size);
         }
 
     }
@@ -191,10 +183,10 @@ namespace Tetris
         public override void Reset()
         {
 
-            this.Items[0] = new Rectangle(this.spawnX + 0, 0, size, size);
-            this.Items[1] = new Rectangle(this.spawnX + size, 0, size, size);
-            this.Items[2] = new Rectangle(this.spawnX + 2 * size, 0, size, size);
-            this.Items[3] = new Rectangle(this.spawnX + 2 * size, size, size, size);
+            Items[0] = new Rectangle(spawnX + 0, 0, Size, Size);
+            Items[1] = new Rectangle(spawnX + Size, 0, Size, Size);
+            Items[2] = new Rectangle(spawnX + 2 * Size, 0, Size, Size);
+            Items[3] = new Rectangle(spawnX + 2 * Size, Size, Size, Size);
         }
 
     }
@@ -208,10 +200,10 @@ namespace Tetris
         public override void Reset()
         {
 
-            this.Items[0] = new Rectangle(this.spawnX + 0, 0, size, size);
-            this.Items[1] = new Rectangle(this.spawnX + size, 0, size, size);
-            this.Items[2] = new Rectangle(this.spawnX + 2 * size, 0, size, size);
-            this.Items[3] = new Rectangle(this.spawnX + 0, size, size, size);
+            Items[0] = new Rectangle(spawnX + 0, 0, Size, Size);
+            Items[1] = new Rectangle(spawnX + Size, 0, Size, Size);
+            Items[2] = new Rectangle(spawnX + 2 * Size, 0, Size, Size);
+            Items[3] = new Rectangle(spawnX + 0, Size, Size, Size);
         }
 
     }
@@ -225,10 +217,10 @@ namespace Tetris
         public override void Reset()
         {
 
-            this.Items[0] = new Rectangle(this.spawnX + 0, 0, size, size);
-            this.Items[1] = new Rectangle(this.spawnX + size, 0, size, size);
-            this.Items[2] = new Rectangle(this.spawnX + 2 * size, 0, size, size);
-            this.Items[3] = new Rectangle(this.spawnX + size, size, size, size);
+            Items[0] = new Rectangle(spawnX + 0, 0, Size, Size);
+            Items[1] = new Rectangle(spawnX + Size, 0, Size, Size);
+            Items[2] = new Rectangle(spawnX + 2 * Size, 0, Size, Size);
+            Items[3] = new Rectangle(spawnX + Size, Size, Size, Size);
         }
 
     }
@@ -242,10 +234,10 @@ namespace Tetris
         public override void Reset()
         {
 
-            this.Items[0] = new Rectangle(this.spawnX + 0, 0, size, size);
-            this.Items[1] = new Rectangle(this.spawnX + 0, size, size, size);
-            this.Items[2] = new Rectangle(this.spawnX + size, size, size, size);
-            this.Items[3] = new Rectangle(this.spawnX + size, 2 * size, size, size);
+            Items[0] = new Rectangle(spawnX + 0, 0, Size, Size);
+            Items[1] = new Rectangle(spawnX + 0, Size, Size, Size);
+            Items[2] = new Rectangle(spawnX + Size, Size, Size, Size);
+            Items[3] = new Rectangle(spawnX + Size, 2 * Size, Size, Size);
         }
 
     }
@@ -259,13 +251,12 @@ namespace Tetris
         public override void Reset()
         {
 
-            this.Items[0] = new Rectangle(this.spawnX + size, 0, size, size);
-            this.Items[1] = new Rectangle(this.spawnX + size, size, size, size);
-            this.Items[2] = new Rectangle(this.spawnX + 0, size, size, size);
-            this.Items[3] = new Rectangle(this.spawnX + 0, 2 * size, size, size);
+            Items[0] = new Rectangle(spawnX + Size, 0, Size, Size);
+            Items[1] = new Rectangle(spawnX + Size, Size, Size, Size);
+            Items[2] = new Rectangle(spawnX + 0, Size, Size, Size);
+            Items[3] = new Rectangle(spawnX + 0, 2 * Size, Size, Size);
         }
 
     }
-
 
 }
